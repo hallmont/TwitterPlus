@@ -27,6 +27,8 @@ class TweetsCell: UITableViewCell {
             
             if let replyScreenName = tweet.replyScreenName {
                 replyLabel.text = "Replying to @\(replyScreenName)"
+            } else {
+                replyLabel.text = ""
             }
         }
     }
