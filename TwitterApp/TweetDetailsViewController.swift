@@ -74,14 +74,12 @@ class TweetDetailsViewController: UIViewController {
     }
         
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        print("*** preparing for Segue")
         if let navigation = segue.destination as? UINavigationController,
             let vc = navigation.viewControllers[0] as? ComposeTweetViewController {
             vc.tweet = tweet
             
             vc.completionHandler = { tweet in
-                //self.tweets.insert(tweet, at: 0)
-                //self.tableView.reloadData()
+
             }
         }
     }

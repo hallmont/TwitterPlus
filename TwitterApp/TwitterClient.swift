@@ -29,8 +29,6 @@ class TwitterClient: BDBOAuth1SessionManager {
         TwitterClient.shared.fetchRequestToken(
             withPath: "oauth/request_token", method: "GET", callbackURL: URL(string: "twitterdemo://oauth"),
             scope: nil, success: { (requestToken: BDBOAuth1Credential!) -> Void in
-                print("I got a token!")
-                
                 print( "request token=\(requestToken.token)")
                 
                 let url = URL(string: "https://api.twitter.com/oauth/authorize?oauth_token=\(requestToken.token!)")!
@@ -53,10 +51,9 @@ class TwitterClient: BDBOAuth1SessionManager {
         
         let requestToken = BDBOAuth1Credential( queryString: url.query)
         fetchAccessToken(withPath: "oauth/access_token", method: "POST", requestToken: requestToken, success: { (accessToken: BDBOAuth1Credential!) -> Void in
-            print("I got the access token! : \(accessToken.token) ")
-            print( "** token secret=\(accessToken.secret)")
+            //print("Access Token: \(accessToken.token) ")
+            //print("Token Secret=\(accessToken.secret)")
       
-            
             self.fetchCurrentAccount(success: { (user: User) in
                 print( "** handleOpenURL: user.name=\(user.name)")
                 User.currentUser = user
@@ -70,9 +67,19 @@ class TwitterClient: BDBOAuth1SessionManager {
         }
     }
     
-    func fetchHomeTimeline( success: @escaping ([Tweet]) -> (), failure: @escaping (Error) -> ()) {
+    func fetchHomeTimeline( maxId: String?, success: @escaping ([Tweet]) -> (), failure: @escaping (Error) -> ()) {
+
+        var parameters: NSDictionary!
+
+        if maxId != nil {
+            parameters = [
+            "max_id": maxId!
+            ]
+        } else {
+            parameters = nil
+        }
         
-        get("1.1/statuses/home_timeline.json", parameters: nil, progress: nil, success: { (task: URLSessionDataTask, response: Any?) -> Void in
+        get("1.1/statuses/home_timeline.json", parameters: parameters, progress: nil, success: { (task: URLSessionDataTask, response: Any?) -> Void in
             let dictionaries = response as! [NSDictionary]
             
             let tweets = Tweet.tweetsWithArray(dictionaries: dictionaries)
@@ -91,10 +98,6 @@ class TwitterClient: BDBOAuth1SessionManager {
         let user = User(dictionary: userDictionary)
             
         success(user)
-        
-        print( "name: \(user.name)" )
-        print( "screenName: \(user.screenName)" )
-        print( "tagline: \(user.tagline)" )
         
         }, failure: { (task: URLSessionDataTask?, error: Error) -> Void in
             failure(error)

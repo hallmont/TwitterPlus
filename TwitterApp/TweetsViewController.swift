@@ -15,6 +15,7 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
     
     var isMoreDataLoading = false
     var loadingMoreView:InfiniteScrollActivityView?
+    //var maxId: String?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -24,7 +25,11 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
         tableView.rowHeight = UITableViewAutomaticDimension
         tableView.estimatedRowHeight = 100
 
-        fetchTweets()
+        fetchTweets(maxId: nil, success: { (tweets: [Tweet]) in
+            self.tweets = tweets
+            self.tableView.reloadData()
+        }) { (error: Error) in
+        }
 
         // Set up Infinite Scroll loading indicator
         let frame = CGRect(x: 0, y: tableView.contentSize.height, width: tableView.bounds.size.width, height: InfiniteScrollActivityView.defaultHeight)
@@ -46,20 +51,20 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
     
     func refreshControlAction( _ refreshControl: UIRefreshControl ) {
         
-        fetchTweets(success: { 
+        fetchTweets(maxId: nil, success: { (tweets: [Tweet]) in
+            self.tweets = tweets
+            self.tableView.reloadData()
             refreshControl.endRefreshing()
         }) { (error: Error) in
             refreshControl.endRefreshing()
         }
     }
     
-    func fetchTweets( success: @escaping ()->() = {}, failure: @escaping (Error)->() = {_ in } )
+    func fetchTweets( maxId: String?, success: @escaping ([Tweet])->() = {_ in }, failure: @escaping (Error)->() = {_ in } )
     {
-        TwitterClient.shared.fetchHomeTimeline(success: { (tweets: [Tweet]) -> () in
-            
-            self.tweets = tweets
-            self.tableView.reloadData()
-            success()
+        TwitterClient.shared.fetchHomeTimeline( maxId: maxId, success: { (tweets: [Tweet]) -> () in
+
+            success(tweets)
             
         }, failure: { (error: Error) -> () in
             print(error.localizedDescription)
@@ -108,10 +113,18 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
     
     func loadMoreData() {
         
-        fetchTweets(success: {
-            //
+        let maxId: String? = self.tweets.last?.id_str
+        
+        fetchTweets(maxId: maxId, success: { (tweets: [Tweet]) in
+            if tweets.count > 1 {
+                for i in 1..<tweets.count {
+                    self.tweets.append( tweets[i] )
+                }
+            }
+            self.isMoreDataLoading = false
+            self.tableView.reloadData()
+            self.loadingMoreView!.stopAnimating()
         }) { (error: Error) in
-            //
         }
     }
 
