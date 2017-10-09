@@ -36,6 +36,7 @@ class TweetsCell: UITableViewCell {
             screenNameLabel.text = tweet.user?.screenNameDisplay
             timestampLabel.text = tweet.timestamp?.getElapsedInterval()
             retweetButton.updateRetweetDisplay(tweet: tweet)
+            favoriteButton.updateFavoriteDisplay(tweet: tweet)
             
             if let replyScreenName = tweet.replyScreenName {
                 replyLabel.text = "Replying to @\(replyScreenName)"
