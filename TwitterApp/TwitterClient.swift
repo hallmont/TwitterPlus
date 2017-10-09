@@ -90,6 +90,55 @@ class TwitterClient: BDBOAuth1SessionManager {
         })
     }
     
+    func fetchUserTimeline( maxId: String?, screenName: String?, success: @escaping ([Tweet]) -> (), failure: @escaping (Error) -> ()) {
+        
+        var parameters: Dictionary! = [String:String]()
+        
+        if let maxId = maxId  {
+            parameters["max_id"] = maxId
+        }
+        if let screenName = screenName {
+            parameters["screen_name"] = screenName
+        }
+        
+        if parameters.count <= 0 {
+            parameters = nil
+        }
+        
+        get("1.1/statuses/user_timeline.json", parameters: parameters, progress: nil, success: { (task: URLSessionDataTask, response: Any?) -> Void in
+            let dictionaries = response as! [NSDictionary]
+            
+            let tweets = Tweet.tweetsWithArray(dictionaries: dictionaries)
+            
+            success(tweets)
+        }, failure: { (task: URLSessionDataTask?, error: Error) -> Void in
+            failure(error)
+        })
+    }
+    
+    func fetchMentionsTimeline( maxId: String?, success: @escaping ([Tweet]) -> (), failure: @escaping (Error) -> ()) {
+        
+        var parameters: Dictionary! = [String:String]()
+        
+        if let maxId = maxId  {
+            parameters["max_id"] = maxId
+        }
+        
+        if parameters.count <= 0 {
+            parameters = nil
+        }
+        
+        get("1.1/statuses/mentions_timeline.json", parameters: parameters, progress: nil, success: { (task: URLSessionDataTask, response: Any?) -> Void in
+            let dictionaries = response as! [NSDictionary]
+            
+            let tweets = Tweet.tweetsWithArray(dictionaries: dictionaries)
+            
+            success(tweets)
+        }, failure: { (task: URLSessionDataTask?, error: Error) -> Void in
+            failure(error)
+        })
+    }
+    
     func fetchCurrentAccount( success: @escaping (User) -> (), failure: @escaping (Error) -> ()) {
         get("1.1/account/verify_credentials.json", parameters: nil, progress: nil, success: { (task: URLSessionDataTask, response: Any?) -> Void in
         print( "account: \(response)")

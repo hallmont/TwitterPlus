@@ -13,27 +13,42 @@ import BDBOAuth1Manager
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
+    var menuViewController: MenuViewController!
 
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
         
-        if User.currentUser != nil {
-            print("There is a current user")
-            
-            let storyboard = UIStoryboard(name: "Main", bundle: nil)
-            let vc = storyboard.instantiateViewController(withIdentifier: "TweetsNavigationController")
-            
-            window?.rootViewController = vc
-        }
-        
         NotificationCenter.default.addObserver(forName: User.userDidLogoutNotification, object: nil, queue: OperationQueue.main) { (notification: Notification) in
             let storyboard = UIStoryboard(name: "Main", bundle: nil)
             let vc = storyboard.instantiateInitialViewController()
-            
             self.window?.rootViewController = vc
         }
+        
+        showMain()
+        
         return true
+    }
+    
+    func showMain()
+    {
+        // let hamburgerViewController = window!.rootViewController as! HamburgerViewController
+        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+        
+        let hamburgerViewController = storyboard.instantiateViewController(withIdentifier: "HamburgerViewController") as! HamburgerViewController
+        
+        menuViewController = storyboard.instantiateViewController(withIdentifier: "MenuViewController") as! MenuViewController
+        menuViewController.hamburgerViewController = hamburgerViewController
+        hamburgerViewController.menuViewController = menuViewController
+        
+        if User.currentUser != nil {
+            print("There is a current user")
+            window?.rootViewController = hamburgerViewController
+        }
+    }
+    
+    func getMenuVC() -> MenuViewController {
+        return menuViewController
     }
 
     func applicationWillResignActive(_ application: UIApplication) {

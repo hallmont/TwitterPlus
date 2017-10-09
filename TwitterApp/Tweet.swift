@@ -19,6 +19,7 @@ class Tweet: NSObject {
     var favorited: Bool
     var retweeted: Bool
     var replyScreenName: NSString?
+    var screenName: String?
     
     init(dictionary: NSDictionary) {
         id_str = dictionary["id_str"] as? String
@@ -30,6 +31,8 @@ class Tweet: NSObject {
         
         retweetCount = (dictionary["retweet_count"] as? Int) ?? 0
         favoritesCount = (dictionary["favorite_count"] as? Int) ?? 0
+        
+        screenName = dictionary["screen_name"] as? String
         
         let timestampString = dictionary["created_at"] as? String
 

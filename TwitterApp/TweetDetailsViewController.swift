@@ -8,7 +8,7 @@
 
 import UIKit
 
-class TweetDetailsViewController: UIViewController {
+class TweetDetailsViewController: UIViewController, TweetsCellDelegate {
 
     @IBOutlet weak var profileImageView: UIImageView!
     @IBOutlet weak var fullNameLabel: UILabel!
@@ -30,6 +30,11 @@ class TweetDetailsViewController: UIViewController {
     let retweetNoImage = UIImage( named: "retweet")
     
     var tweet: Tweet!
+    var cell: TweetsCell! {
+        didSet {
+            tweet = cell.tweet
+        }
+    }
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -39,27 +44,17 @@ class TweetDetailsViewController: UIViewController {
         screenNameLabel.text = tweet.user?.screenNameDisplay
         tweetTextLabel.text = tweet.text as String?
         timestampLabel.text = tweet.timestamp?.getFormattedTimestamp()
+        
+        retweetButton.updateRetweetDisplay(tweet: tweet)
+        favoriteButton.updateFavoriteDisplay(tweet: tweet)
 
         // Do any additional setup after loading the view.
         updateDisplay()
     }
-    
+
     func updateDisplay() {
         favoritesCountLabel.text = "\(tweet.favoritesCount)"
         tweetCountLabel.text = "\(tweet.retweetCount)"
-        print( "favoritesCount=\(tweet.favoritesCount) - retweetCount=\(tweet.retweetCount)")
-        
-        if tweet.favorited {
-            favoriteButton.setImage( favoriteYesImage, for: UIControlState.normal )
-        } else {
-            favoriteButton.setImage( favoriteNoImage, for: UIControlState.normal )
-        }
-        
-        if tweet.retweeted {
-            retweetButton.setImage( retweetYesImage, for: UIControlState.normal )
-        } else {
-            retweetButton.setImage( retweetNoImage, for: UIControlState.normal )
-        }
     }
 
     override func didReceiveMemoryWarning() {
@@ -79,50 +74,25 @@ class TweetDetailsViewController: UIViewController {
             vc.tweet = tweet
             
             vc.completionHandler = { tweet in
-
             }
         }
     }
     
     @IBAction func retweetButtonSelected(_ sender: Any) {
-        if self.tweet.retweeted {
-            TwitterClient.shared.unretweet(tweetId: tweet.id_str!, success: { (tweetReturned: Tweet) in
-                self.tweet.retweetCount -= 1
-                self.tweet.retweeted = false
-                self.updateDisplay()
-            }) { (error: Error) in
-                print( "error=\(error)")
-            }
-        } else {
-            TwitterClient.shared.retweet(tweetId: tweet.id_str!, success: { (tweetReturned: Tweet) in
-                self.tweet.retweetCount += 1
-                self.tweet.retweeted = true
-                self.updateDisplay()
-            }) { (error: Error) in
-                print( "error=\(error)")
-            }
+        retweetButton.toggleRetweetStatus(tweet: tweet, success: { (tweet: Tweet) in
+            self.tweet = tweet
+            self.updateDisplay()
+            self.cell.retweetButton.updateRetweetDisplay(tweet: tweet)
+        }) { (error: Error) in
         }
     }
     
     @IBAction func favoriteButtonSelected(_ sender: Any) {
-        if self.tweet.favorited {
-            TwitterClient.shared.unfavorite(tweetId: tweet.id_str!, success: { (tweetReturned: Tweet ) in
-                self.tweet.favoritesCount -= 1
-                self.tweet.favorited = false
-                self.updateDisplay()
-            }) { (error: Error) in
-                print( "error=\(error)")
-            }
-        } else {
-            TwitterClient.shared.favorite(tweetId: tweet.id_str!, success: { (tweetReturned: Tweet ) in
-                self.tweet.favoritesCount += 1
-                self.tweet.favorited = true
-                self.updateDisplay()
-            }) { (error: Error) in
-                print( "error=\(error)")
-            }
+        favoriteButton.toggleFavoriteStatus(tweet: tweet, success: { (tweet: Tweet) in
+            self.tweet = tweet
+            self.updateDisplay()
+            self.cell.favoriteButton.updateFavoriteDisplay(tweet: tweet)
+        }) { (error: Error) in
         }
-        
-
     }
 }

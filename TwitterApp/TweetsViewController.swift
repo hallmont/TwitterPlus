@@ -8,14 +8,36 @@
 
 import UIKit
 
-class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
+enum ItemType {
+    case tweet
+    case header
+}
+
+enum TweetsControllerType {
+    case timeline
+    case profile
+    case mentions
+}
+
+protocol TableItem {
+    var type: ItemType { get }
+    var rowCount: Int { get }
+}
+
+class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, TweetsCellDelegate {
 
     @IBOutlet weak var tableView: UITableView!
     var tweets: [Tweet]!
     
+    var items = [TableItem]()
+    var tweetItem: TweetItem!
+    var headerItem: HeaderItem!
+    var user: User! = nil
+    var screenName = ""
+    @IBOutlet var timelineView: UIView!
     var isMoreDataLoading = false
     var loadingMoreView:InfiniteScrollActivityView?
-    //var maxId: String?
+    var controllerType: TweetsControllerType = .timeline
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -24,9 +46,17 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
         tableView.dataSource = self
         tableView.rowHeight = UITableViewAutomaticDimension
         tableView.estimatedRowHeight = 100
+        tableView.register(TweetsCell.nib, forCellReuseIdentifier: TweetsCell.identifier)
 
+        tweetItem = TweetItem()
+        if controllerType == .profile {
+            headerItem = HeaderItem()
+            items.append(headerItem)
+        }
+        items.append(tweetItem)
+        
         fetchTweets(maxId: nil, success: { (tweets: [Tweet]) in
-            self.tweets = tweets
+            self.tweetItem.tweets = tweets
             self.tableView.reloadData()
         }) { (error: Error) in
         }
@@ -52,7 +82,7 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
     func refreshControlAction( _ refreshControl: UIRefreshControl ) {
         
         fetchTweets(maxId: nil, success: { (tweets: [Tweet]) in
-            self.tweets = tweets
+            self.tweetItem.tweets = tweets
             self.tableView.reloadData()
             refreshControl.endRefreshing()
         }) { (error: Error) in
@@ -62,33 +92,127 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
     
     func fetchTweets( maxId: String?, success: @escaping ([Tweet])->() = {_ in }, failure: @escaping (Error)->() = {_ in } )
     {
-        TwitterClient.shared.fetchHomeTimeline( maxId: maxId, success: { (tweets: [Tweet]) -> () in
-
-            success(tweets)
-            
-        }, failure: { (error: Error) -> () in
-            print(error.localizedDescription)
-            failure(error)
-        })
-        
+        switch controllerType {
+        case .timeline:
+            TwitterClient.shared.fetchHomeTimeline( maxId: maxId, success: { (tweets: [Tweet]) -> () in
+                success(tweets)
+            }, failure: { (error: Error) -> () in
+                print(error.localizedDescription)
+                failure(error)
+            })
+        case .profile:
+            if screenName == "" {
+                TwitterClient.shared.fetchHomeTimeline( maxId: maxId, success: { (tweets: [Tweet]) -> () in
+                    
+                    success(tweets)
+                    
+                }, failure: { (error: Error) -> () in
+                    print(error.localizedDescription)
+                    failure(error)
+                })
+            } else {
+                TwitterClient.shared.fetchUserTimeline( maxId: maxId, screenName: screenName, success: { (tweets: [Tweet]) -> () in
+                    
+                    success(tweets)
+                    
+                }, failure: { (error: Error) -> () in
+                    print(error.localizedDescription)
+                    failure(error)
+                })
+            }
+        case .mentions:
+            TwitterClient.shared.fetchMentionsTimeline( maxId: maxId, success: { (tweets: [Tweet]) -> () in
+                success(tweets)
+            }, failure: { (error: Error) -> () in
+                print(error.localizedDescription)
+                failure(error)
+            })
+        }
+    }
+    
+    // MARK: - TableView
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return items.count
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-
-        if tweets != nil {
-            return tweets.count
-        }
-        return 0
+        
+        return items[section].rowCount
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "TweetsCell", for: indexPath) as! TweetsCell
+        let item = items[indexPath.section]
         
-        cell.tweet = tweets[indexPath.row]
-        
-        return cell
+        switch item.type {
+        case .header:
+            let cell = tableView.dequeueReusableCell(withIdentifier: "HeaderItem", for: indexPath)  as! HeaderCell
+            let headerItem = item as! HeaderItem
+            
+            if user == nil {
+                user = User.currentUser
+            }
+            cell.user = self.user
+            return cell
+            
+        case .tweet:
+            let cell = tableView.dequeueReusableCell(withIdentifier: TweetsCell.identifier, for: indexPath)  as! TweetsCell
+            let tweetItem = item as! TweetItem
+            cell.tweet = tweetItem.tweets[indexPath.row]
+            cell.delegate = self
+            return cell
+        }
     }
     
+ 
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        
+        let cell = tableView.cellForRow(at: indexPath)
+        self.performSegue(withIdentifier: "DetailsSegue", sender: cell )
+    }
+
+
+    // MARK: - Navigation
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        
+        if( segue.identifier! == "DetailsSegue") {
+            let cell = sender as! TweetsCell
+            let vc = segue.destination as! TweetDetailsViewController
+            vc.cell = cell
+        } else if( segue.identifier == "ComposeSegue" ) {
+            let navigationController = segue.destination as! UINavigationController
+            let vc = navigationController.topViewController as! ComposeTweetViewController
+            vc.tweet = nil
+            
+            vc.completionHandler = { tweet in
+                self.tweets.insert(tweet, at: 0)
+                self.tableView.reloadData()
+            }
+        }
+    }
+    
+    func setUser( user: User, screenName: String ) {
+        self.user = user
+        self.screenName = screenName
+    }
+    
+    func showUserProfile( tweet: Tweet ) {
+        let appDelegate = UIApplication.shared.delegate as! AppDelegate
+        let vc = appDelegate.getMenuVC().getProfileVC()
+        vc.setUser( user: tweet.user!, screenName: tweet.user!.screenName! as String )
+        navigationController?.pushViewController(vc, animated: true)
+    }
+
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+    
+    @IBAction func onLogoutButton(_ sender: Any) {
+        TwitterClient.shared.logout()
+    }
+    
+    // MARK: - Infinite scrolling
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         
         if (!isMoreDataLoading) {
@@ -118,43 +242,13 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
         fetchTweets(maxId: maxId, success: { (tweets: [Tweet]) in
             if tweets.count > 1 {
                 for i in 1..<tweets.count {
-                    self.tweets.append( tweets[i] )
+                    self.tweetItem.tweets.append( tweets[i] )
                 }
             }
             self.isMoreDataLoading = false
             self.tableView.reloadData()
             self.loadingMoreView!.stopAnimating()
         }) { (error: Error) in
-        }
-    }
-
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
-    }
-    
-    @IBAction func onLogoutButton(_ sender: Any) {
-        TwitterClient.shared.logout()
-    }
-
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        print( "destination=\(segue.description)" )
-        if( segue.identifier == "TweetCell") {
-            let cell = sender as! UITableViewCell
-            var indexPath: IndexPath?
-            indexPath = tableView.indexPath(for: cell)
-            
-            let vc = segue.destination as! TweetDetailsViewController
-            vc.tweet = tweets[ indexPath!.row ]
-        } else if( segue.identifier == "ComposeSegue" ) {
-            let navigationController = segue.destination as! UINavigationController
-            let vc = navigationController.topViewController as! ComposeTweetViewController
-            vc.tweet = nil
-
-            vc.completionHandler = { tweet in
-                self.tweets.insert(tweet, at: 0)
-                self.tableView.reloadData()
-            }
         }
     }
 }
@@ -192,6 +286,33 @@ class InfiniteScrollActivityView: UIView {
     func startAnimating() {
         self.isHidden = false
         self.activityIndicatorView.startAnimating()
+    }
+}
+
+// MARK - TableItem
+class TweetItem: TableItem {
+    var tweets: [Tweet]!
+    
+    var type: ItemType {
+        return .tweet
+    }
+    
+    var rowCount: Int {
+        if tweets != nil {
+            return tweets.count
+        }
+        
+        return 0
+    }
+}
+
+class HeaderItem: TableItem {
+    var type: ItemType {
+        return .header
+    }
+    
+    var rowCount: Int {
+        return 1
     }
 }
 
