@@ -39,8 +39,12 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
     var loadingMoreView:InfiniteScrollActivityView?
     var controllerType: TweetsControllerType = .timeline
     
+
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+
         
         tableView.delegate = self
         tableView.dataSource = self
@@ -79,6 +83,18 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
         tableView.insertSubview(refreshControl, at: 0)
     }
     
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        if screenName != "" {
+            fetchTweets(maxId: nil, success: { (tweets: [Tweet]) in
+                self.tweetItem.tweets = tweets
+                self.tableView.reloadData()
+            }) { (error: Error) in
+            }
+            tableView.reloadData()
+        }
+    }
     func refreshControlAction( _ refreshControl: UIRefreshControl ) {
         
         fetchTweets(maxId: nil, success: { (tweets: [Tweet]) in
@@ -151,6 +167,7 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
             if user == nil {
                 user = User.currentUser
             }
+            print( "** self.user=\(self.user)")
             cell.user = self.user
             return cell
             
