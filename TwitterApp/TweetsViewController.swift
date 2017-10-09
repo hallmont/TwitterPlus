@@ -27,7 +27,6 @@ protocol TableItem {
 class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, TweetsCellDelegate {
 
     @IBOutlet weak var tableView: UITableView!
-    var tweets: [Tweet]!
     
     var items = [TableItem]()
     var tweetItem: TweetItem!
@@ -79,26 +78,7 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
         // add refresh control to table view
         tableView.insertSubview(refreshControl, at: 0)
     }
-    
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        
-        if user != nil {
-            print( "** user=\(user.name) screenName=\(screenName)" )
-        }
-        print( "** screenName=\(screenName)" )
-        print( "** controllerType=\(controllerType)")
 
-//        if screenName != "" {
-//            fetchTweets(maxId: nil, success: { (tweets: [Tweet]) in
-//                self.tweetItem.tweets = tweets
-//                self.tableView.reloadData()
-//            }) { (error: Error) in
-//            }
-//            tableView.reloadData()
-//        }
-    }
-    
     func refreshControlAction( _ refreshControl: UIRefreshControl ) {
         
         fetchTweets(maxId: nil, success: { (tweets: [Tweet]) in
@@ -206,7 +186,7 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
             vc.tweet = nil
             
             vc.completionHandler = { tweet in
-                self.tweets.insert(tweet, at: 0)
+                self.tweetItem.tweets.insert(tweet, at: 0)
                 self.tableView.reloadData()
             }
         }
@@ -262,7 +242,7 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
     
     func loadMoreData() {
         
-        let maxId: String? = self.tweets.last?.id_str
+        let maxId: String? = self.tweetItem.tweets.last?.id_str
         
         fetchTweets(maxId: maxId, success: { (tweets: [Tweet]) in
             if tweets.count > 1 {
