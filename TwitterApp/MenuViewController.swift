@@ -11,7 +11,7 @@ import UIKit
 class MenuViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
     @IBOutlet weak var tableView: UITableView!
     
-    private var tweetsNavigationController: UIViewController!
+    private var timelineNavigationController: UIViewController!
     private var profileNavigationController: UIViewController!
     private var mentionsNavigationController: UIViewController!
 
@@ -19,6 +19,7 @@ class MenuViewController: UIViewController, UITableViewDataSource, UITableViewDe
     
     var hamburgerViewController: HamburgerViewController!
     private var profileViewController: TweetsViewController!
+    private var timelineViewController: TweetsViewController!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -28,9 +29,12 @@ class MenuViewController: UIViewController, UITableViewDataSource, UITableViewDe
         
         let storyboard = UIStoryboard(name: "Main", bundle: nil)
 
-        tweetsNavigationController = storyboard.instantiateViewController(withIdentifier: "TweetsNavigationController")
+        timelineNavigationController = storyboard.instantiateViewController(withIdentifier: "TweetsNavigationController")
         profileNavigationController = storyboard.instantiateViewController(withIdentifier: "TweetsNavigationController")
         mentionsNavigationController = storyboard.instantiateViewController(withIdentifier: "TweetsNavigationController")
+        
+        let timelineNC = timelineNavigationController as! UINavigationController
+        timelineViewController = timelineNC.topViewController as! TweetsViewController
         
         let mentionsNC = mentionsNavigationController as! UINavigationController
         let mentionsViewController = mentionsNC.topViewController as! TweetsViewController
@@ -44,20 +48,16 @@ class MenuViewController: UIViewController, UITableViewDataSource, UITableViewDe
 
         
         menuItems.append( MenuItem(title: "Profile", viewController: profileNavigationController))
-        menuItems.append( MenuItem(title: "Timeline", viewController: tweetsNavigationController))
+        menuItems.append( MenuItem(title: "Timeline", viewController: timelineNavigationController))
         menuItems.append( MenuItem(title: "Mentions", viewController: mentionsNavigationController))
         
         // Do any additional setup after loading the view.
-        hamburgerViewController.contentViewController = tweetsNavigationController
+        hamburgerViewController.contentViewController = timelineNavigationController
     }
     
     func getProfileVC() -> TweetsViewController {
         return profileViewController
         
-    }
-    
-    func getProfileVC2() -> UIViewController {
-        return profileNavigationController
     }
 
     override func didReceiveMemoryWarning() {
@@ -80,7 +80,13 @@ class MenuViewController: UIViewController, UITableViewDataSource, UITableViewDe
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
 
-        hamburgerViewController.contentViewController = menuItems[indexPath.row].viewController
+        let item = menuItems[indexPath.row]
+        if item.title == "Timeline" {
+            timelineViewController.screenName = ""
+            timelineViewController.user = User.currentUser
+            print( timelineViewController.controllerType )
+        }
+        hamburgerViewController.contentViewController = item.viewController
     }
 }
 
