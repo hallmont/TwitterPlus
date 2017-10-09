@@ -39,13 +39,9 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
     var loadingMoreView:InfiniteScrollActivityView?
     var controllerType: TweetsControllerType = .timeline
     
-
-    
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-
-        
+    
         tableView.delegate = self
         tableView.dataSource = self
         tableView.rowHeight = UITableViewAutomaticDimension
@@ -59,6 +55,7 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
         }
         items.append(tweetItem)
         
+        print( "** viewDidLoad - before fetchTweets()" )
         fetchTweets(maxId: nil, success: { (tweets: [Tweet]) in
             self.tweetItem.tweets = tweets
             self.tableView.reloadData()
@@ -86,15 +83,22 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        if screenName != "" {
-            fetchTweets(maxId: nil, success: { (tweets: [Tweet]) in
-                self.tweetItem.tweets = tweets
-                self.tableView.reloadData()
-            }) { (error: Error) in
-            }
-            tableView.reloadData()
+        if user != nil {
+            print( "** user=\(user.name) screenName=\(screenName)" )
         }
+        print( "** screenName=\(screenName)" )
+        print( "** controllerType=\(controllerType)")
+
+//        if screenName != "" {
+//            fetchTweets(maxId: nil, success: { (tweets: [Tweet]) in
+//                self.tweetItem.tweets = tweets
+//                self.tableView.reloadData()
+//            }) { (error: Error) in
+//            }
+//            tableView.reloadData()
+//        }
     }
+    
     func refreshControlAction( _ refreshControl: UIRefreshControl ) {
         
         fetchTweets(maxId: nil, success: { (tweets: [Tweet]) in
@@ -214,10 +218,14 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
     }
     
     func showUserProfile( tweet: Tweet ) {
-        let appDelegate = UIApplication.shared.delegate as! AppDelegate
-        let vc = appDelegate.getMenuVC().getProfileVC()
+        let vc = UIStoryboard(name: "Main", bundle: nil).instantiateViewController(withIdentifier: "TweetsViewController") as! TweetsViewController
+        
         vc.setUser( user: tweet.user!, screenName: tweet.user!.screenName! as String )
-        navigationController?.pushViewController(vc, animated: true)
+        print( "** tweet screename=\(tweet.user!.screenName!) screenName=\(self.screenName)")
+
+        vc.controllerType = .profile
+        vc.navigationItem.leftBarButtonItem = nil
+        self.navigationController?.show(vc, sender: self)
     }
 
     override func didReceiveMemoryWarning() {
